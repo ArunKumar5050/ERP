@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import './App.css'
 import LoginForm from './components/Login'
 import StudentDashboard from './components/StudentDashboard'
@@ -19,6 +19,40 @@ import Result from './components/Result'
 import HelpDesk from './components/HelpDesk'
 import ProtectedRoute from './components/ProtectedRoute'
 
+// Component to handle root route redirect
+function RootRedirect() {
+  const token = localStorage.getItem('token')
+  const user = localStorage.getItem('user')
+  
+  // If no token or user data, redirect to login
+  if (!token || !user) {
+    return <Navigate to="/login" replace />
+  }
+  
+  try {
+    const userData = JSON.parse(user)
+    const userRole = userData.role
+    
+    // Redirect based on user role
+    switch (userRole) {
+      case 'student':
+        return <Navigate to="/student/dashboard" replace />
+      case 'faculty':
+        return <Navigate to="/faculty/dashboard" replace />
+      case 'admin':
+        return <Navigate to="/admin-dashboard" replace />
+      default:
+        return <Navigate to="/login" replace />
+    }
+  } catch (error) {
+    // If user data is corrupted, clear it and redirect to login
+    console.error('Error parsing user data:', error)
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    return <Navigate to="/login" replace />
+  }
+}
+
 function AppContent() {
   const location = useLocation()
   const isLoginPage = location.pathname === '/login'
@@ -35,12 +69,10 @@ function AppContent() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginForm />} />
         
+        {/* Root redirect - check authentication and redirect appropriately */}
+        <Route path="/" element={<RootRedirect />} />
+        
         {/* Protected Student Routes */}
-        <Route path="/" element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <StudentDashboard />
-          </ProtectedRoute>
-        } />
         <Route path="/student-dashboard" element={
           <ProtectedRoute allowedRoles={['student']}>
             <StudentDashboard />

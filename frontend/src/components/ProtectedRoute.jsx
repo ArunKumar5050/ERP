@@ -25,8 +25,19 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       }
 
       // Parse user data
-      const userData = JSON.parse(user);
-      setUserRole(userData.role);
+      let userData;
+      try {
+        userData = JSON.parse(user);
+        setUserRole(userData.role);
+      } catch (parseError) {
+        console.error('Error parsing user data:', parseError);
+        // Clear corrupted data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
 
       // Verify token with backend
       await apiClient.getCurrentUser();
@@ -37,6 +48,9 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       // Clear invalid token/user data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+      sessionStorage.clear();
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);

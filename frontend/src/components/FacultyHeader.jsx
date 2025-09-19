@@ -64,14 +64,21 @@ const FacultyHeader = ({ activeTab, setActiveTab }) => {
   // Handle logout
   const handleLogout = async () => {
     try {
+      // Call the improved logout method which clears everything
       await apiClient.logout()
+      
+      // Navigate to login page
+      navigate('/login', { replace: true })
+      
+      // Force a page reload to ensure all state is cleared
+      window.location.reload()
     } catch (error) {
       console.error('Logout error:', error)
-    } finally {
-      // Clear local storage and redirect to login
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      navigate('/login')
+      // Even if logout fails, clear local data and redirect
+      localStorage.clear()
+      sessionStorage.clear()
+      navigate('/login', { replace: true })
+      window.location.reload()
     }
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, BookOpen, FileText, ClipboardList, Calendar, GraduationCap, Settings, LogOut, X, CreditCard, Bell, Headphones } from 'lucide-react';
+import { apiClient } from '../config/api';
 
 export default function Navbar() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -9,6 +10,27 @@ export default function Navbar() {
   const profileButtonRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Handle logout functionality
+  const handleLogout = async () => {
+    try {
+      // Call the improved logout method which clears everything
+      await apiClient.logout();
+      
+      // Navigate to login page
+      navigate('/login', { replace: true });
+      
+      // Force a page reload to ensure all state is cleared
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, clear local data and redirect
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate('/login', { replace: true });
+      window.location.reload();
+    }
+  };
 
   // Check if current route matches the item route
   const isActiveRoute = (route) => {
@@ -304,7 +326,11 @@ export default function Navbar() {
                     }`}
                     onClick={() => {
                       console.log(`Clicked on ${item.label}`);
-                      navigate(item.route);
+                      if (item.label === 'Logout') {
+                        handleLogout();
+                      } else {
+                        navigate(item.route);
+                      }
                       setSidebarOpen(false);
                     }}
                   >

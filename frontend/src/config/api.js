@@ -116,8 +116,21 @@ export class ApiClient {
       await this.request(API_ENDPOINTS.LOGOUT, {
         method: 'POST',
       });
+    } catch (error) {
+      console.log('Logout request failed:', error);
+      // Continue with local cleanup even if server request fails
     } finally {
+      // Clear all authentication data
       this.setToken(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Also clear any other possible auth-related items
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+      
+      // Clear session storage as well
+      sessionStorage.clear();
     }
   }
 
