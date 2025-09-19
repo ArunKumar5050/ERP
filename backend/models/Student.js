@@ -1,31 +1,31 @@
 const mongoose = require('mongoose');
 
 const StudentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  studentId: {
+  student_id: {
     type: String,
     required: [true, 'Student ID is required'],
     unique: true,
     trim: true
   },
-  rollNumber: {
+  name: {
+    type: String,
+    required: [true, 'Student name is required'],
+    trim: true
+  },
+  father_name: {
+    type: String,
+    required: [true, 'Father name is required'],
+    trim: true
+  },
+  roll_no: {
     type: String,
     required: [true, 'Roll number is required'],
     unique: true,
     trim: true
   },
-  course: {
+  branch: {
     type: String,
-    required: [true, 'Course is required'],
-    trim: true
-  },
-  batch: {
-    type: String,
-    required: [true, 'Batch is required'],
+    required: [true, 'Branch is required'],
     trim: true
   },
   semester: {
@@ -39,67 +39,68 @@ const StudentSchema = new mongoose.Schema({
     required: [true, 'Section is required'],
     trim: true
   },
-  dateOfBirth: {
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    trim: true,
+    lowercase: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email']
+  },
+  phone_no: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true
+  },
+  father_phone: {
+    type: String,
+    required: [true, 'Father phone number is required'],
+    trim: true
+  },
+  address: {
+    type: String,
+    required: [true, 'Address is required'],
+    trim: true
+  },
+  date_of_birth: {
     type: Date,
     required: [true, 'Date of birth is required']
   },
-  gender: {
+  blood_group: {
     type: String,
-    enum: ['male', 'female', 'other'],
-    required: [true, 'Gender is required']
+    required: [true, 'Blood group is required'],
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    trim: true
   },
-  address: {
-    street: { type: String, trim: true },
-    city: { type: String, trim: true },
-    state: { type: String, trim: true },
-    pincode: { type: String, trim: true },
-    country: { type: String, default: 'India', trim: true }
+  batch: {
+    type: String,
+    required: [true, 'Batch is required'],
+    trim: true
   },
-  emergencyContact: {
-    name: { type: String, trim: true },
-    relationship: { type: String, trim: true },
-    phone: { type: String, trim: true },
-    email: { type: String, trim: true }
+  mentor_name: {
+    type: String,
+    required: [true, 'Mentor name is required'],
+    trim: true
   },
-  academicInfo: {
-    admissionDate: { type: Date, required: true },
-    expectedGraduation: { type: Date },
-    currentCGPA: { type: Number, min: 0, max: 10, default: 0 },
-    totalCredits: { type: Number, default: 0 },
-    status: {
-      type: String,
-      enum: ['active', 'inactive', 'graduated', 'dropped'],
-      default: 'active'
-    }
-  },
-  subjects: [{
-    subjectCode: { type: String, required: true },
-    subjectName: { type: String, required: true },
-    credits: { type: Number, required: true },
-    faculty: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' },
-    semester: { type: Number, required: true }
-  }],
-  hostelInfo: {
-    isHostelResident: { type: Boolean, default: false },
-    hostelName: { type: String },
-    roomNumber: { type: String },
-    roomType: { type: String, enum: ['single', 'double', 'triple'] }
+  join_date: {
+    type: Date,
+    required: [true, 'Join date is required']
   }
 }, {
   timestamps: true
 });
 
 // Indexes for better performance
-StudentSchema.index({ studentId: 1 });
-StudentSchema.index({ rollNumber: 1 });
-StudentSchema.index({ course: 1, batch: 1, semester: 1 });
-StudentSchema.index({ 'academicInfo.status': 1 });
+StudentSchema.index({ student_id: 1 });
+StudentSchema.index({ roll_no: 1 });
+StudentSchema.index({ email: 1 });
+StudentSchema.index({ branch: 1, batch: 1, semester: 1 });
 
 // Virtual for age
 StudentSchema.virtual('age').get(function() {
-  if (this.dateOfBirth) {
+  if (this.date_of_birth) {
     const today = new Date();
-    const birthDate = new Date(this.dateOfBirth);
+    const birthDate = new Date(this.date_of_birth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
@@ -111,30 +112,5 @@ StudentSchema.virtual('age').get(function() {
   }
   return null;
 });
-
-// Virtual for complete address
-StudentSchema.virtual('fullAddress').get(function() {
-  const addr = this.address;
-  if (!addr) return '';
-  
-  const parts = [addr.street, addr.city, addr.state, addr.pincode, addr.country].filter(Boolean);
-  return parts.join(', ');
-});
-
-// Method to get current semester subjects
-StudentSchema.methods.getCurrentSemesterSubjects = function() {
-  return this.subjects.filter(subject => subject.semester === this.semester);
-};
-
-// Method to calculate overall attendance percentage
-StudentSchema.methods.getOverallAttendancePercentage = async function() {
-  const Attendance = mongoose.model('Attendance');
-  const attendanceRecords = await Attendance.find({ student: this._id });
-  
-  if (attendanceRecords.length === 0) return 0;
-  
-  const totalPresent = attendanceRecords.filter(record => record.status === 'present').length;
-  return Math.round((totalPresent / attendanceRecords.length) * 100);
-};
 
 module.exports = mongoose.model('Student', StudentSchema);

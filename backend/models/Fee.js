@@ -1,283 +1,128 @@
 const mongoose = require('mongoose');
 
-const FeeSchema = new mongoose.Schema({
-  student: {
+const FeeManagementSchema = new mongoose.Schema({
+  fee_id: {
+    type: String,
+    required: [true, 'Fee ID is required'],
+    unique: true,
+    trim: true
+  },
+  student_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
     required: [true, 'Student reference is required']
   },
-  semester: {
+  semester_no: {
     type: Number,
-    required: [true, 'Semester is required'],
+    required: [true, 'Semester number is required'],
     min: [1, 'Semester must be at least 1'],
     max: [8, 'Semester cannot exceed 8']
   },
-  academicYear: {
-    type: String,
-    required: [true, 'Academic year is required'],
-    match: [/^\d{4}-\d{4}$/, 'Academic year format should be YYYY-YYYY']
+  tuition_fee: {
+    type: Number,
+    required: [true, 'Tuition fee is required'],
+    min: [0, 'Tuition fee cannot be negative']
   },
-  feeStructure: {
-    tuitionFee: {
-      type: Number,
-      required: [true, 'Tuition fee is required'],
-      min: [0, 'Tuition fee cannot be negative']
-    },
-    hostelFee: {
-      type: Number,
-      default: 0,
-      min: [0, 'Hostel fee cannot be negative']
-    },
-    libraryFee: {
-      type: Number,
-      default: 0,
-      min: [0, 'Library fee cannot be negative']
-    },
-    labFee: {
-      type: Number,
-      default: 0,
-      min: [0, 'Lab fee cannot be negative']
-    },
-    examFee: {
-      type: Number,
-      default: 0,
-      min: [0, 'Exam fee cannot be negative']
-    },
-    miscellaneousFee: {
-      type: Number,
-      default: 0,
-      min: [0, 'Miscellaneous fee cannot be negative']
-    },
-    fine: {
-      type: Number,
-      default: 0,
-      min: [0, 'Fine cannot be negative']
-    }
+  hostel_fee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Hostel fee cannot be negative']
   },
-  totalAmount: {
+  misc_charges: {
+    type: Number,
+    default: 0,
+    min: [0, 'Miscellaneous charges cannot be negative']
+  },
+  total_amount: {
     type: Number,
     required: [true, 'Total amount is required'],
     min: [0, 'Total amount cannot be negative']
   },
-  amountPaid: {
-    type: Number,
-    default: 0,
-    min: [0, 'Amount paid cannot be negative']
-  },
-  balanceAmount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Balance amount cannot be negative']
-  },
-  dueDate: {
+  due_date: {
     type: Date,
     required: [true, 'Due date is required']
   },
   status: {
     type: String,
-    enum: ['pending', 'partial', 'paid', 'overdue'],
-    default: 'pending'
+    enum: ['Paid', 'Pending'],
+    default: 'Pending',
+    required: [true, 'Status is required']
   },
-  paymentHistory: [{
-    transactionId: {
-      type: String,
-      required: true,
-      unique: true
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: [0, 'Payment amount cannot be negative']
-    },
-    paymentMethod: {
-      type: String,
-      enum: ['cash', 'online', 'bank_transfer', 'cheque', 'demand_draft'],
-      required: true
-    },
-    paymentDate: {
-      type: Date,
-      required: true
-    },
-    receiptNumber: {
-      type: String,
-      required: true
-    },
-    bankDetails: {
-      bankName: String,
-      branchName: String,
-      chequeNumber: String,
-      ddNumber: String
-    },
-    paymentGateway: {
-      gateway: String,
-      gatewayTransactionId: String,
-      gatewayResponse: String
-    },
-    remarks: {
-      type: String,
-      maxlength: [500, 'Remarks cannot exceed 500 characters']
-    },
-    receivedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    verifiedAt: Date,
-    status: {
-      type: String,
-      enum: ['pending', 'verified', 'failed', 'refunded'],
-      default: 'pending'
-    }
-  }],
-  discounts: [{
-    type: {
-      type: String,
-      enum: ['merit', 'financial_aid', 'sports', 'cultural', 'sibling', 'staff_ward', 'other'],
-      required: true
-    },
-    description: {
-      type: String,
-      required: true
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: [0, 'Discount amount cannot be negative']
-    },
-    percentage: {
-      type: Number,
-      min: [0, 'Discount percentage cannot be negative'],
-      max: [100, 'Discount percentage cannot exceed 100']
-    },
-    appliedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    appliedAt: {
-      type: Date,
-      default: Date.now
-    },
-    validTill: Date
-  }],
-  lateFeeApplied: {
-    type: Boolean,
-    default: false
+  transaction_id: {
+    type: String,
+    trim: true,
+    sparse: true // Allows null values but ensures uniqueness when present
   },
-  lateFeeAmount: {
+  pay_date: {
+    type: Date
+  },
+  pending_amount: {
     type: Number,
     default: 0,
-    min: [0, 'Late fee amount cannot be negative']
+    min: [0, 'Pending amount cannot be negative']
   },
-  isRefundInitiated: {
-    type: Boolean,
-    default: false
-  },
-  refundDetails: {
-    refundAmount: {
-      type: Number,
-      min: [0, 'Refund amount cannot be negative']
-    },
-    refundReason: String,
-    refundStatus: {
-      type: String,
-      enum: ['initiated', 'processed', 'completed', 'failed']
-    },
-    refundDate: Date,
-    processedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }
+  paid_amount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Paid amount cannot be negative']
   }
 }, {
   timestamps: true
 });
 
 // Compound indexes for better performance
-FeeSchema.index({ student: 1, semester: 1, academicYear: 1 }, { unique: true });
-FeeSchema.index({ status: 1, dueDate: 1 });
-FeeSchema.index({ academicYear: 1, semester: 1 });
-FeeSchema.index({ 'paymentHistory.transactionId': 1 });
+FeeManagementSchema.index({ student_id: 1, semester_no: 1 }, { unique: true });
+FeeManagementSchema.index({ status: 1, due_date: 1 });
+FeeManagementSchema.index({ fee_id: 1 });
+FeeManagementSchema.index({ transaction_id: 1 }, { sparse: true });
 
-// Pre-save middleware to calculate totals
-FeeSchema.pre('save', function(next) {
-  // Calculate total amount from fee structure
-  const feeStructure = this.feeStructure;
-  this.totalAmount = feeStructure.tuitionFee + 
-                    feeStructure.hostelFee + 
-                    feeStructure.libraryFee + 
-                    feeStructure.labFee + 
-                    feeStructure.examFee + 
-                    feeStructure.miscellaneousFee + 
-                    feeStructure.fine + 
-                    this.lateFeeAmount;
-
-  // Apply discounts
-  const totalDiscount = this.discounts.reduce((sum, discount) => {
-    return sum + discount.amount;
-  }, 0);
+// Pre-save middleware to calculate amounts
+FeeManagementSchema.pre('save', function(next) {
+  // Calculate total amount from fee components
+  this.total_amount = this.tuition_fee + this.hostel_fee + this.misc_charges;
   
-  this.totalAmount -= totalDiscount;
-
-  // Calculate balance amount
-  this.balanceAmount = this.totalAmount - this.amountPaid;
-
+  // Calculate pending amount
+  this.pending_amount = this.total_amount - this.paid_amount;
+  
   // Update status based on payment
-  if (this.balanceAmount <= 0) {
-    this.status = 'paid';
-  } else if (this.amountPaid > 0) {
-    this.status = 'partial';
-  } else if (new Date() > this.dueDate) {
-    this.status = 'overdue';
+  if (this.pending_amount <= 0) {
+    this.status = 'Paid';
   } else {
-    this.status = 'pending';
+    this.status = 'Pending';
   }
-
+  
   next();
 });
 
-// Method to add payment
-FeeSchema.methods.addPayment = function(paymentData) {
-  this.paymentHistory.push(paymentData);
-  this.amountPaid += paymentData.amount;
-  return this.save();
-};
+// Virtual for payment progress percentage
+FeeManagementSchema.virtual('payment_progress').get(function() {
+  if (this.total_amount === 0) return 100;
+  return Math.round((this.paid_amount / this.total_amount) * 100);
+});
 
-// Method to apply discount
-FeeSchema.methods.applyDiscount = function(discountData) {
-  this.discounts.push(discountData);
-  return this.save();
-};
-
-// Method to apply late fee
-FeeSchema.methods.applyLateFee = function(amount, appliedBy) {
-  this.lateFeeAmount = amount;
-  this.lateFeeApplied = true;
-  return this.save();
-};
+// Virtual to check if payment is overdue
+FeeManagementSchema.virtual('is_overdue').get(function() {
+  return new Date() > this.due_date && this.status !== 'Paid';
+});
 
 // Static method to get fee summary for a student
-FeeSchema.statics.getStudentFeeSummary = async function(studentId) {
+FeeManagementSchema.statics.getStudentFeeSummary = async function(studentId) {
   const pipeline = [
-    { $match: { student: new mongoose.Types.ObjectId(studentId) } },
+    { $match: { student_id: new mongoose.Types.ObjectId(studentId) } },
     {
       $group: {
         _id: null,
-        totalFees: { $sum: '$totalAmount' },
-        totalPaid: { $sum: '$amountPaid' },
-        totalBalance: { $sum: '$balanceAmount' },
+        totalFees: { $sum: '$total_amount' },
+        totalPaid: { $sum: '$paid_amount' },
+        totalPending: { $sum: '$pending_amount' },
         paidSemesters: {
           $sum: {
-            $cond: [{ $eq: ['$status', 'paid'] }, 1, 0]
+            $cond: [{ $eq: ['$status', 'Paid'] }, 1, 0]
           }
         },
         pendingSemesters: {
           $sum: {
-            $cond: [{ $ne: ['$status', 'paid'] }, 1, 0]
+            $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0]
           }
         }
       }
@@ -288,21 +133,18 @@ FeeSchema.statics.getStudentFeeSummary = async function(studentId) {
   return result[0] || {
     totalFees: 0,
     totalPaid: 0,
-    totalBalance: 0,
+    totalPending: 0,
     paidSemesters: 0,
     pendingSemesters: 0
   };
 };
 
-// Virtual for payment progress percentage
-FeeSchema.virtual('paymentProgress').get(function() {
-  if (this.totalAmount === 0) return 100;
-  return Math.round((this.amountPaid / this.totalAmount) * 100);
-});
+// Method to make payment
+FeeManagementSchema.methods.makePayment = function(amount, transactionId = null, paymentDate = new Date()) {
+  this.paid_amount += amount;
+  this.transaction_id = transactionId;
+  this.pay_date = paymentDate;
+  return this.save();
+};
 
-// Virtual to check if payment is overdue
-FeeSchema.virtual('isOverdue').get(function() {
-  return new Date() > this.dueDate && this.status !== 'paid';
-});
-
-module.exports = mongoose.model('Fee', FeeSchema);
+module.exports = mongoose.model('FeeManagement', FeeManagementSchema);

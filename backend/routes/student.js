@@ -14,16 +14,8 @@ router.use(authorize('student'));
 // @access  Private (Student)
 router.get('/dashboard', asyncHandler(async (req, res) => {
   try {
-    const student = await Student.findOne({ user: req.user._id })
-      .populate('user', 'firstName lastName email')
-      .populate('subjects.faculty', 'user designation department', 'Faculty')
-      .populate({
-        path: 'subjects.faculty',
-        populate: {
-          path: 'user',
-          select: 'firstName lastName'
-        }
-      });
+    // Find student by matching email with user email
+    const student = await Student.findOne({ email: req.user.email });
 
     if (!student) {
       return res.status(404).json({
@@ -32,11 +24,19 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
       });
     }
 
-    // Get overall attendance percentage
-    const overallAttendance = await student.getOverallAttendancePercentage();
-
-    // Get attendance summary by subject
-    const attendanceSummary = await Attendance.getStudentAttendanceSummary(student._id);
+    // Get attendance summary using the new subject-wise attendance schema
+    let attendanceSummary = [];
+    let overallAttendance = 0;
+    try {
+      attendanceSummary = await Attendance.getStudentAttendanceSummary(student._id);
+      if (attendanceSummary.length > 0) {
+        const totalClasses = attendanceSummary.reduce((sum, subject) => sum + subject.total_classes, 0);
+        const totalPresent = attendanceSummary.reduce((sum, subject) => sum + (subject.present_classes + subject.late_classes), 0);
+        overallAttendance = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+      }
+    } catch (error) {
+      console.log('Attendance summary error (using defaults):', error.message);
+    }
 
     // Get fee summary (with error handling)
     let feeSummary = {
@@ -53,38 +53,43 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
       console.log('Fee summary error (using defaults):', error.message);
     }
 
-    // Get recent attendance activity
-    const recentAttendance = await Attendance.find({ student: student._id })
-      .populate('faculty', 'user designation', 'Faculty')
+    // Get recent attendance activity from the new attendance schema
+    const recentAttendance = await Attendance.find({ student_id: student._id })
+      .populate('subject_id', 'subject_code subject_name')
+      .populate('faculty_id', 'user')
       .populate({
-        path: 'faculty',
+        path: 'faculty_id',
         populate: {
           path: 'user',
           select: 'firstName lastName'
         }
       })
-      .sort({ date: -1, period: 1 })
+      .sort({ updatedAt: -1 })
       .limit(10);
 
     // Get pending fees (with error handling)
     let pendingFees = [];
     try {
       pendingFees = await Fee.find({
-        student: student._id,
-        status: { $in: ['pending', 'partial', 'overdue'] }
-      }).sort({ dueDate: 1 }).limit(3);
+        student_id: student._id,
+        status: 'Pending'
+      }).sort({ due_date: 1 }).limit(3);
     } catch (error) {
       console.log('Pending fees error (using empty array):', error.message);
     }
 
-    // Calculate stats
-    const currentSemesterSubjects = student.getCurrentSemesterSubjects();
-    const totalClasses = await Attendance.countDocuments({ student: student._id });
-    const attendedClasses = await Attendance.countDocuments({ 
-      student: student._id, 
-      status: 'present' 
-    });
-    const missedClasses = totalClasses - attendedClasses;
+    // Calculate stats from attendance summary
+    const totalClasses = attendanceSummary.reduce((sum, subject) => sum + subject.total_classes, 0);
+    const attendedClasses = attendanceSummary.reduce((sum, subject) => sum + subject.present_classes + subject.late_classes, 0);
+    const missedClasses = attendanceSummary.reduce((sum, subject) => sum + subject.absent_classes, 0);
+
+    // Mock current semester subjects (since we don't have the subjects field in the new schema)
+    const currentSemesterSubjects = attendanceSummary.map(attendance => ({
+      subjectCode: attendance.subject_code,
+      subjectName: attendance.subject_name,
+      credits: 3, // Default value
+      semester: student.semester
+    }));
 
     res.json({
       success: true,
@@ -123,16 +128,8 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 // @access  Private (Student)
 router.get('/profile', asyncHandler(async (req, res) => {
   try {
-    const student = await Student.findOne({ user: req.user._id })
-      .populate('user', 'firstName lastName email phone avatar')
-      .populate('subjects.faculty', 'user designation department', 'Faculty')
-      .populate({
-        path: 'subjects.faculty',
-        populate: {
-          path: 'user',
-          select: 'firstName lastName'
-        }
-      });
+    // Find student by matching email with user email
+    const student = await Student.findOne({ email: req.user.email });
 
     if (!student) {
       return res.status(404).json({
@@ -162,7 +159,8 @@ router.get('/attendance', asyncHandler(async (req, res) => {
   try {
     const { subjectCode, startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -170,41 +168,40 @@ router.get('/attendance', asyncHandler(async (req, res) => {
       });
     }
 
-    // Build query
-    let query = { student: student._id };
+    // Build query for new attendance schema
+    let query = { student_id: student._id };
     
     if (subjectCode) {
-      query['subject.subjectCode'] = subjectCode;
-    }
-    
-    if (startDate && endDate) {
-      query.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
+      // Find subject by code and use its ID
+      const Subject = require('../models').Subject;
+      const subject = await Subject.findOne({ subject_code: subjectCode });
+      if (subject) {
+        query.subject_id = subject._id;
+      }
     }
 
     // Get attendance records with pagination
     const attendanceRecords = await Attendance.find(query)
-      .populate('faculty', 'user designation', 'Faculty')
+      .populate('subject_id', 'subject_code subject_name credits')
+      .populate('faculty_id', 'user')
       .populate({
-        path: 'faculty',
+        path: 'faculty_id',
         populate: {
           path: 'user',
           select: 'firstName lastName'
         }
       })
-      .sort({ date: -1, period: 1 })
+      .sort({ updatedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
     // Get total count
     const total = await Attendance.countDocuments(query);
 
-    // Get summary by subject
+    // Get summary by subject using new schema
     const attendanceSummary = await Attendance.getStudentAttendanceSummary(
       student._id, 
-      subjectCode
+      subjectCode ? parseInt(student.semester) : null
     );
 
     res.json({
