@@ -151,6 +151,10 @@ export class ApiClient {
     return this.request(url.toString());
   }
 
+  async getStudentProfile() {
+    return this.request(API_ENDPOINTS.STUDENT_PROFILE);
+  }
+
   // Faculty methods
   async getFacultyDashboard() {
     return this.request(API_ENDPOINTS.FACULTY_DASHBOARD);

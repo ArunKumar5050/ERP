@@ -65,7 +65,59 @@ const FeeManagementSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: [0, 'Paid amount cannot be negative']
-  }
+  },
+  // Add payment history array
+  paymentHistory: [{
+    transaction_id: {
+      type: String,
+      required: true
+    },
+    amount: {
+      type: Number,
+      required: true
+    },
+    payment_method: {
+      type: String,
+      required: true
+    },
+    payment_date: {
+      type: Date,
+      default: Date.now
+    },
+    receipt_number: String,
+    receivedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    verified_at: Date,
+    status: {
+      type: String,
+      default: 'verified'
+    },
+    remarks: String
+  }],
+  // Add discounts array
+  discounts: [{
+    type: {
+      type: String,
+      enum: ['scholarship', 'waiver', 'concession']
+    },
+    amount: Number,
+    percentage: Number,
+    appliedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    appliedAt: {
+      type: Date,
+      default: Date.now
+    },
+    remarks: String
+  }]
 }, {
   timestamps: true
 });
@@ -144,6 +196,22 @@ FeeManagementSchema.methods.makePayment = function(amount, transactionId = null,
   this.paid_amount += amount;
   this.transaction_id = transactionId;
   this.pay_date = paymentDate;
+  return this.save();
+};
+
+// Method to add payment to payment history
+FeeManagementSchema.methods.addPayment = function(paymentData) {
+  this.paymentHistory.push(paymentData);
+  this.paid_amount += paymentData.amount;
+  
+  // Update pending amount
+  this.pending_amount = this.total_amount - this.paid_amount;
+  
+  // Update status based on payment
+  if (this.pending_amount <= 0) {
+    this.status = 'Paid';
+  }
+  
   return this.save();
 };
 

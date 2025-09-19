@@ -13,7 +13,8 @@ router.use(authenticate);
 // @access  Private (Student)
 router.get('/student', authorize('student'), asyncHandler(async (req, res) => {
   try {
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email (consistent with student routes)
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -22,20 +23,17 @@ router.get('/student', authorize('student'), asyncHandler(async (req, res) => {
     }
 
     // Get all fee records for the student
-    const feeRecords = await Fee.find({ student: student._id })
-      .sort({ semester: 1 })
-      .populate('paymentHistory.receivedBy', 'firstName lastName')
-      .populate('paymentHistory.verifiedBy', 'firstName lastName')
-      .populate('discounts.appliedBy', 'firstName lastName');
+    const feeRecords = await Fee.find({ student_id: student._id })
+      .sort({ semester_no: 1 });
 
     // Get fee summary
     const feeSummary = await Fee.getStudentFeeSummary(student._id);
 
     // Get pending fees
     const pendingFees = await Fee.find({
-      student: student._id,
-      status: { $in: ['pending', 'partial', 'overdue'] }
-    }).sort({ dueDate: 1 });
+      student_id: student._id,
+      status: { $in: ['Pending'] }
+    }).sort({ due_date: 1 });
 
     res.json({
       success: true,
@@ -60,7 +58,8 @@ router.get('/student', authorize('student'), asyncHandler(async (req, res) => {
 // @access  Private (Student)
 router.get('/student/summary', authorize('student'), asyncHandler(async (req, res) => {
   try {
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email (consistent with student routes)
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -71,9 +70,9 @@ router.get('/student/summary', authorize('student'), asyncHandler(async (req, re
     const feeSummary = await Fee.getStudentFeeSummary(student._id);
 
     // Get breakdown by semester
-    const semesterBreakdown = await Fee.find({ student: student._id })
-      .select('semester academicYear totalAmount amountPaid balanceAmount status dueDate')
-      .sort({ semester: 1 });
+    const semesterBreakdown = await Fee.find({ student_id: student._id })
+      .select('semester_no academicYear total_amount paid_amount pending_amount status due_date')
+      .sort({ semester_no: 1 });
 
     // Calculate payment progress
     const paymentProgress = feeSummary.totalFees > 0 
@@ -107,7 +106,8 @@ router.get('/student/payments', authorize('student'), asyncHandler(async (req, r
   try {
     const { page = 1, limit = 20 } = req.query;
 
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email (consistent with student routes)
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -117,12 +117,10 @@ router.get('/student/payments', authorize('student'), asyncHandler(async (req, r
 
     // Get fee records with payment history
     const feeRecords = await Fee.find({ 
-      student: student._id,
+      student_id: student._id,
       'paymentHistory.0': { $exists: true }
     })
-    .populate('paymentHistory.receivedBy', 'firstName lastName')
-    .populate('paymentHistory.verifiedBy', 'firstName lastName')
-    .sort({ 'paymentHistory.paymentDate': -1 });
+    .sort({ 'paymentHistory.payment_date': -1 });
 
     // Extract all payments and sort by date
     let allPayments = [];
@@ -130,7 +128,7 @@ router.get('/student/payments', authorize('student'), asyncHandler(async (req, r
       fee.paymentHistory.forEach(payment => {
         allPayments.push({
           ...payment.toObject(),
-          semester: fee.semester,
+          semester: fee.semester_no,
           academicYear: fee.academicYear,
           feeId: fee._id
         });
@@ -138,7 +136,7 @@ router.get('/student/payments', authorize('student'), asyncHandler(async (req, r
     });
 
     // Sort by payment date (newest first)
-    allPayments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+    allPayments.sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
 
     // Implement pagination
     const startIndex = (page - 1) * limit;
@@ -175,7 +173,8 @@ router.get('/student/receipt/:transactionId', authorize('student'), asyncHandler
   try {
     const { transactionId } = req.params;
 
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email (consistent with student routes)
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -185,19 +184,10 @@ router.get('/student/receipt/:transactionId', authorize('student'), asyncHandler
 
     // Find the fee record with this transaction
     const feeRecord = await Fee.findOne({
-      student: student._id,
-      'paymentHistory.transactionId': transactionId
+      student_id: student._id,
+      'paymentHistory.transaction_id': transactionId
     })
-    .populate('student')
-    .populate({
-      path: 'student',
-      populate: {
-        path: 'user',
-        select: 'firstName lastName email'
-      }
-    })
-    .populate('paymentHistory.receivedBy', 'firstName lastName')
-    .populate('paymentHistory.verifiedBy', 'firstName lastName');
+    .populate('student_id');
 
     if (!feeRecord) {
       return res.status(404).json({
@@ -207,7 +197,7 @@ router.get('/student/receipt/:transactionId', authorize('student'), asyncHandler
     }
 
     // Find the specific payment
-    const payment = feeRecord.paymentHistory.find(p => p.transactionId === transactionId);
+    const payment = feeRecord.paymentHistory.find(p => p.transaction_id === transactionId);
     
     if (!payment) {
       return res.status(404).json({
@@ -220,29 +210,29 @@ router.get('/student/receipt/:transactionId', authorize('student'), asyncHandler
       success: true,
       data: {
         receipt: {
-          transactionId: payment.transactionId,
+          transactionId: payment.transaction_id,
           amount: payment.amount,
-          paymentMethod: payment.paymentMethod,
-          paymentDate: payment.paymentDate,
-          receiptNumber: payment.receiptNumber,
+          paymentMethod: payment.payment_method,
+          paymentDate: payment.payment_date,
+          receiptNumber: payment.receipt_number,
           status: payment.status,
           remarks: payment.remarks,
           receivedBy: payment.receivedBy,
           verifiedBy: payment.verifiedBy,
-          verifiedAt: payment.verifiedAt
+          verifiedAt: payment.verified_at
         },
         feeDetails: {
-          semester: feeRecord.semester,
+          semester: feeRecord.semester_no,
           academicYear: feeRecord.academicYear,
-          totalAmount: feeRecord.totalAmount,
+          totalAmount: feeRecord.total_amount,
           feeStructure: feeRecord.feeStructure
         },
         studentDetails: {
-          name: feeRecord.student.user.firstName + ' ' + feeRecord.student.user.lastName,
-          studentId: feeRecord.student.studentId,
-          rollNumber: feeRecord.student.rollNumber,
-          course: feeRecord.student.course,
-          email: feeRecord.student.user.email
+          name: feeRecord.student_id.name,
+          studentId: feeRecord.student_id.student_id,
+          rollNumber: feeRecord.student_id.roll_no,
+          course: feeRecord.student_id.branch,
+          email: feeRecord.student_id.email
         }
       }
     });
@@ -263,7 +253,8 @@ router.post('/payment/initiate', authorize('student'), asyncHandler(async (req, 
   try {
     const { feeId, amount, paymentMethod } = req.body;
 
-    const student = await Student.findOne({ user: req.user._id });
+    // Find student by matching email with user email (consistent with student routes)
+    const student = await Student.findOne({ email: req.user.email });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -273,7 +264,7 @@ router.post('/payment/initiate', authorize('student'), asyncHandler(async (req, 
 
     const feeRecord = await Fee.findOne({
       _id: feeId,
-      student: student._id
+      student_id: student._id
     });
 
     if (!feeRecord) {
@@ -283,14 +274,14 @@ router.post('/payment/initiate', authorize('student'), asyncHandler(async (req, 
       });
     }
 
-    if (feeRecord.balanceAmount <= 0) {
+    if (feeRecord.balance_amount <= 0) {
       return res.status(400).json({
         success: false,
         message: 'No pending amount for this fee record'
       });
     }
 
-    if (amount > feeRecord.balanceAmount) {
+    if (amount > feeRecord.balance_amount) {
       return res.status(400).json({
         success: false,
         message: 'Payment amount cannot exceed balance amount'
@@ -304,11 +295,11 @@ router.post('/payment/initiate', authorize('student'), asyncHandler(async (req, 
     // For demo purposes, we'll simulate payment success
     // In production, this would integrate with actual payment gateways
     const paymentData = {
-      transactionId,
+      transaction_id: transactionId,
       amount,
-      paymentMethod,
-      paymentDate: new Date(),
-      receiptNumber,
+      payment_method: paymentMethod,
+      payment_date: new Date(),
+      receipt_number: receiptNumber,
       receivedBy: req.user._id, // In real scenario, this would be the payment processor
       status: 'verified' // In real scenario, this would be 'pending' initially
     };
@@ -345,7 +336,7 @@ router.get('/admin/overview', authorize('admin'), asyncHandler(async (req, res) 
 
     let matchCondition = {};
     if (academicYear) matchCondition.academicYear = academicYear;
-    if (semester) matchCondition.semester = parseInt(semester);
+    if (semester) matchCondition.semester_no = parseInt(semester);
 
     // Get overall fee statistics
     const overallStats = await Fee.aggregate([
@@ -353,10 +344,10 @@ router.get('/admin/overview', authorize('admin'), asyncHandler(async (req, res) 
       {
         $group: {
           _id: null,
-          totalFees: { $sum: '$totalAmount' },
-          totalCollected: { $sum: '$amountPaid' },
-          totalPending: { $sum: '$balanceAmount' },
-          totalStudents: { $addToSet: '$student' }
+          totalFees: { $sum: '$total_amount' },
+          totalCollected: { $sum: '$paid_amount' },
+          totalPending: { $sum: '$pending_amount' },
+          totalStudents: { $addToSet: '$student_id' }
         }
       },
       {
@@ -379,8 +370,8 @@ router.get('/admin/overview', authorize('admin'), asyncHandler(async (req, res) 
         $group: {
           _id: '$status',
           count: { $sum: 1 },
-          totalAmount: { $sum: '$totalAmount' },
-          collectedAmount: { $sum: '$amountPaid' }
+          totalAmount: { $sum: '$total_amount' },
+          collectedAmount: { $sum: '$paid_amount' }
         }
       }
     ]);
@@ -390,10 +381,10 @@ router.get('/admin/overview', authorize('admin'), asyncHandler(async (req, res) 
       { $match: matchCondition },
       {
         $group: {
-          _id: { semester: '$semester', academicYear: '$academicYear' },
-          totalFees: { $sum: '$totalAmount' },
-          totalCollected: { $sum: '$amountPaid' },
-          studentCount: { $addToSet: '$student' }
+          _id: { semester: '$semester_no', academicYear: '$academicYear' },
+          totalFees: { $sum: '$total_amount' },
+          totalCollected: { $sum: '$paid_amount' },
+          studentCount: { $addToSet: '$student_id' }
         }
       },
       {

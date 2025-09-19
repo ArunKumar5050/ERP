@@ -1,41 +1,119 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Hash, GraduationCap, Building, UserCheck, UserPlus, Phone as PhoneIcon } from 'lucide-react';
+import { apiClient } from '../config/api';
 
 export default function Profile() {
-  const studentData = {
-    name: "Alex Johnson",
-    initials: "AJ",
-    rollNumber: "ST2024001",
-    semester: "5th Semester",
-    cgpa: "8.7",
-    program: "Bachelor of Computer Science",
-    section: "Section c",
-    personalInfo: {
-      email: "alex.johnson@student.college.edu",
-      phone: "+1 (555) 987-6543",
-      address: "123 University Avenue, Student Housing Block A, Room 204",
-      dateOfBirth: "March 15, 2003",
-      bloodGroup: "B+"
-    },
-    academicInfo: {
-      department: "Computer Science & Engineering",
-      batch: "2022-2026",
-      mentor: "Dr. Sarah Wilson",
-      joinDate: "August 20, 2022",
-      studentType: "Regular"
-    },
-    emergencyContact: {
-      name: "Robert Johnson",
-      relation: "Father",
-      phone: "+1 (555) 123-4567"
-    },
-    academicProgress: {
-      admissionYear: "2023",
-      currentSemester: "5th Semester",
-      cgpa: "8.7",
-      expectedGraduation: "2027"
+  const [studentData, setStudentData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchStudentProfile();
+  }, []);
+
+  const fetchStudentProfile = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await apiClient.getStudentProfile();
+      
+      if (response.success) {
+        // Transform the API data to match the component's expected structure
+        const transformedData = transformStudentData(response.data);
+        setStudentData(transformedData);
+      } else {
+        setError('Failed to fetch student profile');
+      }
+    } catch (err) {
+      console.error('Error fetching student profile:', err);
+      setError('Error loading student profile');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const transformStudentData = (apiData) => {
+    // Extract first name and last name from the name field
+    const nameParts = apiData.name?.split(' ') || [];
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    
+    return {
+      name: apiData.name || 'Unknown Student',
+      initials: initials || 'US',
+      rollNumber: apiData.roll_no || 'N/A',
+      semester: `${apiData.semester || 'N/A'}th Semester`,
+      cgpa: 'N/A', // Not available in current data
+      program: `Bachelor of ${apiData.branch || 'Engineering'}`,
+      section: `Section ${apiData.section || 'N/A'}`,
+      personalInfo: {
+        email: apiData.email || 'N/A',
+        phone: apiData.phone_no || 'N/A',
+        address: apiData.address || 'N/A',
+        dateOfBirth: apiData.date_of_birth ? new Date(apiData.date_of_birth).toLocaleDateString() : 'N/A',
+        bloodGroup: apiData.blood_group || 'N/A'
+      },
+      academicInfo: {
+        department: apiData.branch || 'N/A',
+        batch: apiData.batch || 'N/A',
+        mentor: apiData.mentor_name || 'N/A',
+        joinDate: apiData.join_date ? new Date(apiData.join_date).toLocaleDateString() : 'N/A',
+        studentType: 'Regular' // Default value
+      },
+      emergencyContact: {
+        name: apiData.father_name || 'N/A',
+        relation: 'Father', // Default value
+        phone: apiData.father_phone || 'N/A'
+      },
+      academicProgress: {
+        admissionYear: apiData.batch ? apiData.batch.split('-')[0] : 'N/A',
+        currentSemester: `${apiData.semester || 'N/A'}th Semester`,
+        cgpa: 'N/A', // Not available in current data
+        expectedGraduation: apiData.batch ? `20${parseInt(apiData.batch.split('-')[1]) + 4}` : 'N/A'
+      }
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading student profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-2xl mb-4">Error Loading Profile</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={fetchStudentProfile}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-500 text-2xl mb-4">No Profile Data Available</div>
+          <p className="text-gray-600">Unable to load student profile information.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

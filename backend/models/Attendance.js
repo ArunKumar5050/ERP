@@ -188,7 +188,7 @@ AttendanceSchema.statics.getStudentAttendanceSummary = async function(studentId,
         attendance_percentage: {
           $cond: {
             if: { $gt: ['$total_classes', 0] },
-            then: { $round: [{ $multiply: [{ $divide: [{ $add: ['$present_classes', '$late_classes'] }, '$total_classes'] }, 100] }, 2] },
+            then: { $round: [{ $multiply: [{ $divide: [{ $add: ['$present_classes'] }, '$total_classes'] }, 100] }, 2] },
             else: 0
           }
         },
@@ -260,7 +260,7 @@ AttendanceSchema.statics.getFacultyAttendanceOverview = async function(facultyId
           $avg: {
             $cond: {
               if: { $gt: ['$total_classes', 0] },
-              then: { $multiply: [{ $divide: [{ $add: ['$present_classes', '$late_classes'] }, '$total_classes'] }, 100] },
+              then: { $multiply: [{ $divide: [{ $add: ['$present_classes'] }, '$total_classes'] }, 100] },
               else: 0
             }
           }
@@ -273,7 +273,7 @@ AttendanceSchema.statics.getFacultyAttendanceOverview = async function(facultyId
                   {
                     $cond: {
                       if: { $gt: ['$total_classes', 0] },
-                      then: { $multiply: [{ $divide: [{ $add: ['$present_classes', '$late_classes'] }, '$total_classes'] }, 100] },
+                      then: { $multiply: [{ $divide: [{ $add: ['$present_classes'] }, '$total_classes'] }, 100] },
                       else: 0
                     }
                   }, 
