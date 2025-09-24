@@ -12,6 +12,7 @@ const attendanceRoutes = require('./routes/attendance');
 const feeRoutes = require('./routes/fee');
 const noticeRoutes = require('./routes/notice');
 const helpdeskRoutes = require('./routes/helpdesk');
+const dropoutRoutes = require('./routes/dropout'); // Add this line
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/fee', feeRoutes);
 app.use('/api/notice', noticeRoutes);
 app.use('/api/helpdesk', helpdeskRoutes);
+app.use('/api/dropout', dropoutRoutes); // Add this line
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

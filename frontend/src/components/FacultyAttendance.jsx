@@ -1,10 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import FacultyHeader from './FacultyHeader'
+import { apiClient } from '../config/api'
 
 const FacultyAttendance = () => {
   const [activeTab, setActiveTab] = useState('Attendance')
   const [selectedClass, setSelectedClass] = useState('CS-101')
   const [searchTerm, setSearchTerm] = useState('')
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   // Available classes
   const classes = [
@@ -13,19 +17,56 @@ const FacultyAttendance = () => {
     { id: 'CS-103', name: 'Web Development', time: '02:00 PM', students: 42 }
   ]
 
-  // Student attendance data
-  const [students, setStudents] = useState([
-    { id: 'CS101_001', name: 'Student 1', rollNo: 'CS101_001', attendance: 86, lastSeen: '17/09/2025', isPresent: true },
-    { id: 'CS101_002', name: 'Student 2', rollNo: 'CS101_002', attendance: 89, lastSeen: '24/09/2025', isPresent: true },
-    { id: 'CS101_003', name: 'Student 3', rollNo: 'CS101_003', attendance: 92, lastSeen: '04/09/2025', isPresent: true },
-    { id: 'CS101_004', name: 'Student 4', rollNo: 'CS101_004', attendance: 95, lastSeen: '15/09/2025', isPresent: true },
-    { id: 'CS101_005', name: 'Student 5', rollNo: 'CS101_005', attendance: 69, lastSeen: '23/09/2025', isPresent: true },
-    { id: 'CS101_006', name: 'Student 6', rollNo: 'CS101_006', attendance: 67, lastSeen: '17/09/2025', isPresent: false },
-    { id: 'CS101_007', name: 'Student 7', rollNo: 'CS101_007', attendance: 61, lastSeen: '05/09/2025', isPresent: true },
-    { id: 'CS101_008', name: 'Student 8', rollNo: 'CS101_008', attendance: 92, lastSeen: '02/09/2025', isPresent: true },
-    { id: 'CS101_009', name: 'Student 9', rollNo: 'CS101_009', attendance: 88, lastSeen: '08/09/2025', isPresent: true },
-    { id: 'CS101_010', name: 'Student 10', rollNo: 'CS101_010', attendance: 68, lastSeen: '10/09/2025', isPresent: true }
-  ])
+  // Fetch students data from the backend
+  useEffect(() => {
+    fetchStudents()
+  }, [])
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      
+      // Fetch real student data from the backend
+      const response = await apiClient.getFacultyStudents()
+      
+      if (response.success) {
+        // Transform the data to match our component's expected structure
+        const transformedStudents = response.data.map((student) => ({
+          id: student._id,
+          name: student.name,
+          rollNo: student.roll_no,
+          attendance: Math.floor(Math.random() * 40) + 60, // Mock attendance data
+          lastSeen: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'),
+          isPresent: Math.random() > 0.2 // Randomly mark some as absent
+        }))
+        
+        setStudents(transformedStudents)
+      } else {
+        throw new Error('Failed to fetch students')
+      }
+    } catch (err) {
+      console.error('Error fetching students:', err)
+      setError('Failed to load student data')
+      // Fallback to mock data
+      const mockStudents = [
+        { id: 'CS101_001', name: 'Amit Sharma', rollNo: 'CS101_001', attendance: 86, lastSeen: '17/09/2025', isPresent: true },
+        { id: 'CS101_002', name: 'Priya Patel', rollNo: 'CS101_002', attendance: 89, lastSeen: '24/09/2025', isPresent: true },
+        { id: 'CS101_003', name: 'Rahul Verma', rollNo: 'CS101_003', attendance: 92, lastSeen: '04/09/2025', isPresent: true },
+        { id: 'CS101_004', name: 'Sneha Gupta', rollNo: 'CS101_004', attendance: 95, lastSeen: '15/09/2025', isPresent: true },
+        { id: 'CS101_005', name: 'Vikram Singh', rollNo: 'CS101_005', attendance: 69, lastSeen: '23/09/2025', isPresent: true },
+        { id: 'CS101_006', name: 'Anjali Mehta', rollNo: 'CS101_006', attendance: 67, lastSeen: '17/09/2025', isPresent: false },
+        { id: 'CS101_007', name: 'Deepak Kumar', rollNo: 'CS101_007', attendance: 61, lastSeen: '05/09/2025', isPresent: true },
+        { id: 'CS101_008', name: 'Neha Reddy', rollNo: 'CS101_008', attendance: 92, lastSeen: '02/09/2025', isPresent: true },
+        { id: 'CS101_009', name: 'Arjun Rao', rollNo: 'CS101_009', attendance: 88, lastSeen: '08/09/2025', isPresent: true },
+        { id: 'CS101_010', name: 'Pooja Desai', rollNo: 'CS101_010', attendance: 68, lastSeen: '10/09/2025', isPresent: true }
+      ]
+      
+      setStudents(mockStudents)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filter students based on search term
   const filteredStudents = students.filter(student =>
@@ -37,7 +78,7 @@ const FacultyAttendance = () => {
   const totalStudents = students.length
   const presentStudents = students.filter(s => s.isPresent).length
   const absentStudents = totalStudents - presentStudents
-  const attendanceRate = Math.round((presentStudents / totalStudents) * 100)
+  const attendanceRate = totalStudents > 0 ? Math.round((presentStudents / totalStudents) * 100) : 0
 
   // Toggle individual student attendance
   const toggleStudentAttendance = (studentId) => {
@@ -67,6 +108,40 @@ const FacultyAttendance = () => {
       return 'bg-red-50'
     }
     return 'bg-green-50'
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <FacultyHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading student data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <FacultyHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Data</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={fetchStudents}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

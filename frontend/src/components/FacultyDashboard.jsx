@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import FacultyHeader from './FacultyHeader'
 import { apiClient } from '../config/api'
+import { useNavigate } from 'react-router-dom'
 
 const FacultyDashboard = () => {
   const [activeTab, setActiveTab] = useState('Home')
   const [dashboardData, setDashboardData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchDashboardData()
@@ -115,7 +117,7 @@ const FacultyDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -157,6 +159,18 @@ const FacultyDashboard = () => {
                 <p className="text-xs text-gray-500">This semester</p>
               </div>
               <div className="text-2xl">📊</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
+               onClick={() => navigate('/faculty/at-risk')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">View All</p>
+                <p className="text-lg font-bold text-blue-600">At-Risk Students</p>
+                <p className="text-xs text-gray-500">Detailed analysis</p>
+              </div>
+              <div className="text-2xl">→</div>
             </div>
           </div>
         </div>

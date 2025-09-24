@@ -115,4 +115,30 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   }
 }));
 
+// @route   GET /api/faculty/students
+// @desc    Get all students for the faculty
+// @access  Private (Faculty)
+router.get('/students', asyncHandler(async (req, res) => {
+  try {
+    // Fetch all students with basic information
+    const students = await Student.find({ 
+      'academicInfo.status': 'active' 
+    })
+    .select('name roll_no email phone_no branch semester section')
+    .sort({ branch: 1, semester: 1, section: 1, roll_no: 1 });
+
+    res.json({
+      success: true,
+      data: students,
+      count: students.length
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching students data'
+    });
+  }
+}));
+
 module.exports = router;

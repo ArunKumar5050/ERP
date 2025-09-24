@@ -9,7 +9,7 @@ const FacultyHeader = ({ activeTab, setActiveTab }) => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [facultyInfo, setFacultyInfo] = useState(null)
   const dropdownRef = useRef(null)
-  const tabs = ['Home', 'Schedule', 'Attendance', 'All Stud', 'Results', 'My Attendance', 'Reports']
+  const tabs = ['Home', 'Schedule', 'Attendance', 'At-Risk Students', 'Results', 'My Attendance', 'Reports']
 
   // Get faculty info from localStorage
   useEffect(() => {
@@ -45,7 +45,7 @@ const FacultyHeader = ({ activeTab, setActiveTab }) => {
         setActiveTab('Attendance')
         break
       case '/faculty/at-risk':
-        setActiveTab('All Stud')
+        setActiveTab('At-Risk Students')
         break
       case '/faculty/results':
         setActiveTab('Results')
@@ -100,7 +100,7 @@ const FacultyHeader = ({ activeTab, setActiveTab }) => {
       case 'Attendance':
         navigate('/faculty/attendance')
         break
-      case 'All Stud':
+      case 'At-Risk Students':
         navigate('/faculty/at-risk')
         break
       case 'Results':
@@ -208,12 +208,12 @@ const FacultyHeader = ({ activeTab, setActiveTab }) => {
       {/* Navigation Tabs */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-center space-x-2 py-4">
+          <div className="flex justify-center space-x-2 py-4 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabClick(tab)}
-                className={`py-2 px-6 text-sm font-medium border-2 rounded-lg transition-all duration-200 ${
+                className={`py-2 px-4 text-sm font-medium border-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-green-600 bg-green-600 text-white shadow-md'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-green-500 hover:bg-green-50 hover:text-green-700 hover:shadow-sm'

@@ -1,0 +1,9 @@
+@echo off
+echo Starting AI Dropout Prediction Service...
+echo Make sure you have Python and required packages installed
+echo Installing required packages...
+pip install -r backend\ai\requirements.txt
+echo Starting Flask API server...
+cd backend\ai
+python api.py
+pause

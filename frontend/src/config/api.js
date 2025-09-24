@@ -23,6 +23,12 @@ export const API_ENDPOINTS = {
   FACULTY_SCHEDULE: `${API_BASE_URL}/faculty/schedule`,
   FACULTY_AT_RISK: `${API_BASE_URL}/faculty/students/at-risk`,
   
+  // Dropout Prediction
+  DROPOUT_AT_RISK: `${API_BASE_URL}/dropout/at-risk`,
+  DROPOUT_PREDICT: `${API_BASE_URL}/dropout/predict`,
+  DROPOUT_TRAIN: `${API_BASE_URL}/dropout/train`,
+  DROPOUT_FEATURE_IMPORTANCE: `${API_BASE_URL}/dropout/feature-importance`,
+  
   // Attendance
   MARK_ATTENDANCE: `${API_BASE_URL}/attendance/mark`,
   ATTENDANCE_OVERVIEW: `${API_BASE_URL}/attendance/faculty/overview`,
@@ -158,6 +164,26 @@ export class ApiClient {
   // Faculty methods
   async getFacultyDashboard() {
     return this.request(API_ENDPOINTS.FACULTY_DASHBOARD);
+  }
+
+  async getFacultyStudents() {
+    return this.request(API_ENDPOINTS.FACULTY_STUDENTS);
+  }
+
+  async getAtRiskStudents() {
+    return this.request(API_ENDPOINTS.DROPOUT_AT_RISK);
+  }
+
+  async predictStudentDropout(studentId) {
+    return this.request(`${API_ENDPOINTS.DROPOUT_PREDICT}/${studentId}`, {
+      method: 'POST'
+    });
+  }
+
+  async trainDropoutModel() {
+    return this.request(API_ENDPOINTS.DROPOUT_TRAIN, {
+      method: 'POST'
+    });
   }
 
   async markAttendance(attendanceData) {
