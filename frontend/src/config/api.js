@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // API endpoints
 export const API_ENDPOINTS = {
@@ -20,11 +20,11 @@ export const API_ENDPOINTS = {
   FACULTY_DASHBOARD: `${API_BASE_URL}/faculty/dashboard`,
   FACULTY_PROFILE: `${API_BASE_URL}/faculty/profile`,
   FACULTY_STUDENTS: `${API_BASE_URL}/faculty/students`,
+  FACULTY_STUDENTS_WITH_ATTENDANCE: `${API_BASE_URL}/faculty/students/with-attendance`,
   FACULTY_SCHEDULE: `${API_BASE_URL}/faculty/schedule`,
   FACULTY_AT_RISK: `${API_BASE_URL}/faculty/students/at-risk`,
   
   // Dropout Prediction
-  DROPOUT_AT_RISK: `${API_BASE_URL}/dropout/at-risk`,
   DROPOUT_PREDICT: `${API_BASE_URL}/dropout/predict`,
   DROPOUT_TRAIN: `${API_BASE_URL}/dropout/train`,
   DROPOUT_FEATURE_IMPORTANCE: `${API_BASE_URL}/dropout/feature-importance`,
@@ -86,21 +86,53 @@ export class ApiClient {
 
     console.log('API Request:', { url, config }); // Debug log
 
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+    // Add retry mechanism for failed requests
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch(url, config);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          // If not JSON, try to get text
+          const text = await response.text();
+          data = { 
+            success: response.ok,
+            message: text || `HTTP ${response.status}: ${response.statusText}`,
+            data: null
+          };
+        }
 
-      console.log('API Response:', { status: response.status, data }); // Debug log
+        console.log('API Response:', { status: response.status, data, attempt }); // Debug log
 
-      if (!response.ok) {
-        throw new Error(data.message || 'API request failed');
+        if (!response.ok) {
+          throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`API Error (attempt ${attempt}):`, error);
+        lastError = error;
+        
+        // Don't retry on authentication errors or client errors
+        if (error.message && (error.message.includes('401') || error.message.includes('403') || error.message.includes('400'))) {
+          throw error;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
-
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
     }
+    
+    // If all attempts failed, throw the last error
+    throw lastError;
   }
 
   // Auth methods
@@ -170,8 +202,13 @@ export class ApiClient {
     return this.request(API_ENDPOINTS.FACULTY_STUDENTS);
   }
 
+  async getFacultyStudentsWithAttendance() {
+    console.log('Making request to:', API_ENDPOINTS.FACULTY_STUDENTS_WITH_ATTENDANCE)
+    return this.request(API_ENDPOINTS.FACULTY_STUDENTS_WITH_ATTENDANCE);
+  }
+
   async getAtRiskStudents() {
-    return this.request(API_ENDPOINTS.DROPOUT_AT_RISK);
+    return this.request(API_ENDPOINTS.FACULTY_AT_RISK);
   }
 
   async predictStudentDropout(studentId) {

@@ -17,17 +17,52 @@ const FacultyAtRisk = () => {
     try {
       setLoading(true);
       setError('');
+      
+      // Debug: Check if user is authenticated
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      console.log('Auth check:', { token: !!token, user: user ? JSON.parse(user) : null });
+      
+      if (!token) {
+        setError('You are not logged in. Please log in again.');
+        return;
+      }
+      
       const response = await apiClient.getAtRiskStudents();
       if (response.success) {
-        setAtRiskStudents(response.data);
+        // Extract the atRiskStudents array from the nested data structure and transform it
+        const transformedStudents = (response.data.atRiskStudents || []).map(student => ({
+          student_id: student._id,
+          name: student.studentInfo.name,
+          roll_no: student.studentInfo.rollNumber,
+          email: student.studentInfo.email,
+          risk_score: student.overallAttendance / 100, // Convert percentage to 0-1 scale
+          risk_level: student.riskLevel,
+          top_reasons: [
+            {
+              factor: 'Attendance',
+              description: `Overall attendance is ${student.overallAttendance}%`
+            }
+          ]
+        }));
+        setAtRiskStudents(transformedStudents);
       } else {
-        setError('Failed to fetch at-risk students');
+        setError('Failed to fetch at-risk students: ' + (response.message || ''));
       }
     } catch (err) {
       console.error('Error fetching at-risk students:', err);
-      // Check if it's a connection error to the AI service
-      if (err.message && err.message.includes('fetch')) {
-        setError('AI Service is not available. Please ensure the AI service is running.');
+      console.error('Error details:', {
+        message: err.message,
+        status: err.status,
+        response: err.response
+      });
+      // Provide more specific error messages
+      if (err.message && err.message.includes('401')) {
+        setError('Authentication failed. Please log in again.');
+      } else if (err.message && err.message.includes('404')) {
+        setError('At-risk students endpoint not found. Please contact administrator.');
+      } else if (err.message && err.message.includes('fetch')) {
+        setError('Unable to connect to server. Please check your connection.');
       } else {
         setError('Error loading at-risk students: ' + err.message);
       }
@@ -84,8 +119,9 @@ const FacultyAtRisk = () => {
               <h3 className="font-medium text-yellow-800 mb-2">To fix this issue:</h3>
               <ul className="text-yellow-700 text-left list-disc pl-5 space-y-1">
                 <li>Make sure MongoDB is running on localhost:27017</li>
-                <li>Start the AI service by running: <code className="bg-gray-100 px-1 rounded">start-ai-service.bat</code></li>
-                <li>Ensure the main backend server is running</li>
+                <li>Ensure the main backend server is running on port 5000</li>
+                <li>Check if you are properly logged in as faculty</li>
+                <li>Try refreshing the page or logging out and back in</li>
               </ul>
             </div>
             <button 

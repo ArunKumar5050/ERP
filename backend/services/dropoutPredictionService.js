@@ -3,7 +3,7 @@ const axios = require('axios');
 const { Student, AcademicDetails, Attendance, Fee } = require('../models');
 
 // AI Service URL (Flask API)
-const AI_SERVICE_URL = 'http://localhost:5001';
+const AI_SERVICE_URL = 'http://localhost:5001'; // Reverted to original port 5001 to match api.py
 
 class DropoutPredictionService {
   /**

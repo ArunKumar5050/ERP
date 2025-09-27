@@ -49,7 +49,12 @@ app.get('/api/health', (req, res) => {
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/erp_system');
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/erp_system', {
+      serverSelectionTimeoutMS: 30000, // Increase server selection timeout
+      socketTimeoutMS: 45000, // Increase socket timeout
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('MongoDB connection error:', error);

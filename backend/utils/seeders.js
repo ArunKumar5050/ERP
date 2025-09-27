@@ -219,7 +219,8 @@ const seedDatabase = async () => {
         blood_group: bloodGroups[index % bloodGroups.length],
         batch: '2023-2027',
         mentor_name: mentors[index % mentors.length],
-        join_date: new Date('2023-08-15')
+        join_date: new Date('2023-08-15'),
+        user: user._id // Add user reference
       };
     });
 
